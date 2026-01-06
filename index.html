@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Memory Challenge - Pro Edition</title>
+    <title>Pi Memory Challenge - 3 Strikes Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
@@ -17,17 +17,6 @@
             --dim-red: #3a1a1a;
         }
 
-        /* 900+ DIGIT DRAMA MODE */
-        body.danger-zone {
-            background-color: #000000;
-        }
-        
-        body.danger-zone .container {
-            border-color: var(--danger-red);
-            box-shadow: 0 0 50px rgba(255, 51, 51, 0.4);
-            background: #1a0505;
-        }
-
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--deep-charcoal);
@@ -39,33 +28,20 @@
             min-height: 100vh;
             margin: 0;
             overflow: hidden;
-            transition: background-color 1.5s ease;
+            transition: background-color 1s ease;
         }
 
-        /* SPLIT TIMERS */
-        .splits-bar {
-            width: 95%;
-            max-width: 1050px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-bottom: 10px;
-            min-height: 25px;
+        /* High Stakes Mode (Active at 900+) */
+        body.high-stakes {
+            background-color: #000000;
+        }
+        
+        body.high-stakes .container {
+            border-color: var(--danger-red);
+            box-shadow: 0 0 40px rgba(255, 51, 51, 0.4);
         }
 
-        .split-pill {
-            background: rgba(255,255,255,0.1);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            color: var(--mid-grey);
-            border: 1px solid rgba(255,255,255,0.05);
-            animation: fade-in 0.5s ease;
-        }
-        .split-pill span { color: var(--gold); font-weight: bold; margin-left: 5px;}
-
-        /* PROGRESS BAR & PB MARKER */
+        /* Progress Bar & Best Marker */
         .progress-wrapper {
             width: 95%;
             max-width: 1050px;
@@ -74,9 +50,9 @@
             border: 1px solid var(--mid-grey);
             border-radius: 6px;
             margin-bottom: 15px;
-            overflow: visible; /* Changed to visible so glow doesn't clip if we want it large, but relative for positioning */
-            position: relative; 
+            overflow: visible; /* changed to visible to allow glow overflow if needed */
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: relative;
         }
 
         .progress-fill {
@@ -85,19 +61,47 @@
             background: var(--gold);
             box-shadow: 0 0 15px var(--gold);
             transition: width 0.1s linear;
-            border-radius: 5px;
+            border-radius: 6px;
         }
 
-        .pb-marker {
+        #best-marker {
             position: absolute;
-            top: -4px;
+            top: -4px; /* Extend slightly above/below */
             bottom: -4px;
             width: 3px;
-            background: #fff;
-            box-shadow: 0 0 10px #fff, 0 0 20px #fff;
+            background-color: white;
+            box-shadow: 0 0 8px white, 0 0 15px white;
             z-index: 10;
-            display: none; /* Hidden by default */
-            pointer-events: none;
+            display: none; /* Hidden until first fail */
+            transition: left 0.3s ease;
+        }
+
+        /* Split Timers (Left Margin) */
+        #splits-container {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 80vh;
+            overflow-y: auto;
+            text-align: left;
+            opacity: 0.6;
+            width: 120px;
+            pointer-events: none; /* Let clicks pass through if needed */
+        }
+
+        .split-entry {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: var(--steel-blue);
+        }
+        
+        .split-entry span {
+            color: var(--text-light);
+            font-weight: bold;
         }
 
         .container {
@@ -109,7 +113,9 @@
             max-width: 1050px; 
             text-align: center;
             border: 1px solid var(--mid-grey);
-            transition: all 1.5s ease;
+            position: relative;
+            z-index: 2;
+            transition: border 0.5s ease, box-shadow 0.5s ease;
         }
 
         .header-area {
@@ -332,6 +338,7 @@
         }
         .btn-review:hover { background: rgba(255,255,255,0.1); border-color: white; }
 
+        /* Main Screen Retry Button (initially hidden) */
         #main-restart-btn {
             display: none;
             max-width: 400px;
@@ -351,21 +358,16 @@
             30%, 50%, 70% { transform: translate3d(-8px, 0, 0); border-color: var(--danger-red); }
             40%, 60% { transform: translate3d(8px, 0, 0); border-color: var(--danger-red); }
         }
-
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(-5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
     </style>
 </head>
 <body>
 
-<div class="splits-bar" id="splits-bar">
+<div id="splits-container">
     </div>
 
 <div class="progress-wrapper">
     <div class="progress-fill" id="progress-bar"></div>
-    <div class="pb-marker" id="pb-marker"></div>
+    <div id="best-marker"></div>
 </div>
 
 <div class="container">
@@ -433,6 +435,7 @@
     const PI_DIGITS = generatePi(1200);
     const TARGET = 1010;
     
+    // DEBUG LOG
     console.log(`Target: ${TARGET}`);
     console.log("Console Command available: debugWin()");
 
@@ -441,35 +444,16 @@
     let currentRow = null;
     let currentGroup = null;
     
-    // --- STRIKE SYSTEM ---
+    // --- TIMING VARIABLES ---
+    let startTime = null;
+    let timerRunning = false;
+
+    // --- STRIKE SYSTEM VARIABLES ---
     let strikes = 0;
     let isCooldown = false;
 
-    let personalBest = Number(localStorage.getItem('pi-stream-pb')) || 0;
+    let personalBest = localStorage.getItem('pi-stream-pb') || 0;
     document.getElementById('best').textContent = personalBest;
-
-    // --- TIMING SYSTEM ---
-    let startTime = null;
-
-    function formatTime(ms) {
-        let totalSeconds = Math.floor(ms / 1000);
-        let minutes = Math.floor(totalSeconds / 60);
-        let seconds = totalSeconds % 60;
-        let millis = Math.floor((ms % 1000) / 10); // 2 digits
-        return `${minutes}:${seconds.toString().padStart(2, '0')}.${millis.toString().padStart(2, '0')}`;
-    }
-
-    function addSplit(count) {
-        if (!startTime) return;
-        const now = Date.now();
-        const diff = now - startTime;
-        const timeStr = formatTime(diff);
-        
-        const pill = document.createElement('div');
-        pill.className = 'split-pill';
-        pill.innerHTML = `${count}: <span>${timeStr}</span>`;
-        document.getElementById('splits-bar').appendChild(pill);
-    }
 
     function playWrongSound() {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -490,10 +474,18 @@
         var duration = 5 * 1000;
         var animationEnd = Date.now() + duration;
         var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 200 };
-        function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+        function randomInRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
         var interval = setInterval(function() {
             var timeLeft = animationEnd - Date.now();
-            if (timeLeft <= 0) return clearInterval(interval);
+
+            if (timeLeft <= 0) {
+                return clearInterval(interval);
+            }
+
             var particleCount = 50 * (timeLeft / duration);
             confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
             confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
@@ -504,6 +496,7 @@
         const rowsContainer = document.getElementById('pi-rows-container');
         const row = document.createElement('div');
         row.className = 'pi-row';
+        
         if (isFirstRow) {
             row.classList.add('centered-row');
             const prefix = document.createElement('div');
@@ -511,13 +504,16 @@
             prefix.innerHTML = '<span class="digit decimal">3</span><span class="digit decimal">.</span>';
             row.appendChild(prefix);
         }
+        
         rowsContainer.appendChild(row);
         currentRow = row;
     }
 
     function createNewGroup() {
         if (!currentRow) createNewRow(true); 
+        
         if (currentGroup) currentGroup.classList.remove('active-chunk');
+        
         const group = document.createElement('div');
         group.className = 'pi-group active-chunk';
         currentRow.appendChild(group);
@@ -528,6 +524,7 @@
         isCooldown = state;
         const btns = document.querySelectorAll('.numpad button');
         const viewport = document.getElementById('viewport');
+        
         if (state) {
             btns.forEach(b => b.classList.add('locked'));
             viewport.classList.add('cooldown');
@@ -537,12 +534,29 @@
         }
     }
 
+    function formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function updateBestMarker() {
+        // Only updates position if PB > 0
+        if (personalBest > 0) {
+            const pct = Math.min((personalBest / TARGET) * 100, 100);
+            const marker = document.getElementById('best-marker');
+            marker.style.left = pct + '%';
+        }
+    }
+
     function handleInput(num) {
         if (gameOver || isCooldown) return;
 
-        // START TIMER ON FIRST INPUT
-        if (currentIndex === 0 && !startTime) {
+        // START TIMER ON FIRST DIGIT
+        if (currentIndex === 0 && !timerRunning) {
             startTime = Date.now();
+            timerRunning = true;
         }
 
         // --- LAYOUT LOGIC ---
@@ -551,8 +565,12 @@
             createNewGroup();
         } else if (currentIndex > 10) {
             const relIndex = currentIndex - 10;
-            if (relIndex > 0 && relIndex % 18 === 0) createNewRow(false);
-            if (relIndex > 0 && relIndex % 6 === 0) createNewGroup();
+            if (relIndex > 0 && relIndex % 18 === 0) {
+                createNewRow(false);
+            }
+            if (relIndex > 0 && relIndex % 6 === 0) {
+                createNewGroup();
+            }
         }
 
         const viewport = document.getElementById('viewport');
@@ -567,21 +585,24 @@
             currentIndex++;
             document.getElementById('score').textContent = currentIndex;
             
-            // Progress Bar
             const progressPercent = (currentIndex / TARGET) * 100;
             document.getElementById('progress-bar').style.width = Math.min(progressPercent, 100) + '%';
+
+            // --- HIGH STAKES MODE (900+) ---
+            if (currentIndex === 900) {
+                document.body.classList.add('high-stakes');
+            }
+
+            // --- SPLIT TIMERS (Every 100) ---
+            if (currentIndex % 100 === 0) {
+                const elapsed = Date.now() - startTime;
+                const splitDiv = document.createElement('div');
+                splitDiv.className = 'split-entry';
+                splitDiv.innerHTML = `${currentIndex}: <span>${formatTime(elapsed)}</span>`;
+                document.getElementById('splits-container').appendChild(splitDiv);
+            }
             
             viewport.scrollTop = viewport.scrollHeight;
-
-            // --- SPLIT TIMER (Every 100) ---
-            if (currentIndex > 0 && currentIndex % 100 === 0) {
-                addSplit(currentIndex);
-            }
-
-            // --- DRAMA MODE (At 900) ---
-            if (currentIndex === 900) {
-                document.body.classList.add('danger-zone');
-            }
             
             if (currentIndex === TARGET) endGame(true);
 
@@ -610,9 +631,17 @@
 
     function endGame(won, numInput) {
         gameOver = true;
+        timerRunning = false;
+
         if (!won) {
             document.getElementById('modal-title').textContent = "CHALLENGE OVER";
             document.getElementById('modal-title').style.color = "#d32f2f";
+            
+            // SHOW BEST MARKER (Hidden until first fail logic)
+            const marker = document.getElementById('best-marker');
+            marker.style.display = 'block';
+            updateBestMarker();
+
         } else {
             document.getElementById('modal-title').textContent = "1010 DIGITS!";
             document.getElementById('modal-title').style.color = "var(--gold)";
@@ -623,6 +652,8 @@
             personalBest = currentIndex;
             localStorage.setItem('pi-stream-pb', personalBest);
             document.getElementById('best').textContent = personalBest;
+            // Update marker immediately if we just set a new PB
+            updateBestMarker();
         }
 
         document.getElementById('final-score').textContent = currentIndex + (won ? " (MAX!)" : "");
@@ -631,7 +662,10 @@
     }
 
     function closeModal() {
+        // VIEW BOARD MODE
         document.getElementById('game-over-modal').style.display = 'none';
+        
+        // Hide Numpad, Show Retry Button
         document.getElementById('numpad').style.display = 'none';
         document.getElementById('main-restart-btn').style.display = 'block';
     }
@@ -643,41 +677,33 @@
     function resetGame() {
         currentIndex = 0;
         gameOver = false;
+        timerRunning = false;
+        startTime = null;
         currentRow = null;
         currentGroup = null;
-        startTime = null; // Reset Timer
         
-        // Reset Visuals
+        // Reset Strikes
         strikes = 0;
         isCooldown = false;
         setCooldown(false);
-        document.body.classList.remove('danger-zone');
         document.querySelectorAll('.strike-symbol').forEach(el => el.classList.remove('active'));
-        document.getElementById('splits-bar').innerHTML = '';
 
-        // Reset Score Board
+        // Reset High Stakes
+        document.body.classList.remove('high-stakes');
+
+        // Reset Splits
+        document.getElementById('splits-container').innerHTML = '';
+
         document.getElementById('score').textContent = '0';
         document.getElementById('progress-bar').style.width = '0%';
         document.getElementById('pi-rows-container').innerHTML = ''; 
         document.getElementById('game-over-modal').style.display = 'none';
         
-        // --- PB MARKER LOGIC ---
-        const pbMarker = document.getElementById('pb-marker');
-        // Only show if we have a valid PB > 0
-        if (personalBest > 0) {
-            pbMarker.style.display = 'block';
-            // Calculate percentage, max at 100%
-            let pbPercent = (personalBest / TARGET) * 100;
-            if (pbPercent > 100) pbPercent = 100;
-            pbMarker.style.left = pbPercent + '%';
-        } else {
-            pbMarker.style.display = 'none';
-        }
-
-        // UI Reset
+        // Restore Numpad, Hide Retry Button
         document.getElementById('numpad').style.display = 'grid';
         document.getElementById('main-restart-btn').style.display = 'none';
         
+        // Initialize Layout Immediately
         createNewRow(true); 
         createNewGroup();
     }
@@ -686,14 +712,24 @@
     window.debugWin = function() {
         if(gameOver) resetGame();
         let i = currentIndex;
+        
+        // Force start time if not started, so splits have timestamps
+        if(!timerRunning) {
+            startTime = Date.now();
+            timerRunning = true;
+        }
+
         function fastType() {
             const batchSize = 50; 
+            // STOP AT 1007, NOT 1010
+            const stopAt = 1007;
+
             for(let k=0; k<batchSize; k++) {
-                if (i >= TARGET) return;
+                if (i >= stopAt) return;
                 handleInput(PI_DIGITS[i]);
                 i++;
             }
-            if (i < TARGET && !gameOver) requestAnimationFrame(fastType);
+            if (i < stopAt && !gameOver) requestAnimationFrame(fastType);
         }
         fastType();
     };
