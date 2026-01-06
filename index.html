@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Memory Challenge - 3 Strikes Edition</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --deep-charcoal: #121212;
+            --gunmetal-grey: #2a2e35;
+            --steel-blue: #4682b4;
+            --gold: #ffd700;
+            --mid-grey: #6c757d;
+            --text-light: #e0e0e0;
+            --danger-red: #ff3333;
+            --dim-red: #3a1a1a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--deep-charcoal);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .progress-wrapper {
+            width: 95%;
+            max-width: 1050px;
+            height: 12px;
+            background: var(--deep-charcoal);
+            border: 1px solid var(--mid-grey);
+            border-radius: 6px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--gold);
+            box-shadow: 0 0 15px var(--gold);
+            transition: width 0.1s linear;
+        }
+
+        .container {
+            background: var(--gunmetal-grey);
+            padding: 2.5rem;
+            border-radius: 14px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            width: 95%;
+            max-width: 1050px; 
+            text-align: center;
+            border: 1px solid var(--mid-grey);
+        }
+
+        .header-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .badge {
+            background: var(--deep-charcoal);
+            padding: 8px 25px;
+            border-radius: 25px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            border: 2px solid var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .score-badge { color: var(--gold); }
+        .best-badge { color: var(--text-light); border-color: var(--mid-grey); }
+
+        /* --- NEW STRIKES STYLING --- */
+        .strikes-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 50px;
+            display: inline-flex;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .strike-symbol {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--dim-red); /* Dim/Inactive state */
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-shadow: none;
+            user-select: none;
+        }
+
+        .strike-symbol.active {
+            color: var(--danger-red);
+            text-shadow: 0 0 20px rgba(255, 51, 51, 0.8);
+            transform: scale(1.3);
+        }
+        /* -------------------------- */
+
+        .pi-viewport {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 25px;
+            height: 220px; 
+            overflow-y: auto;
+            overflow-x: hidden; 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            scrollbar-width: thin;
+            scrollbar-color: var(--steel-blue) transparent;
+            display: flex;
+            justify-content: center;
+            transition: border-color 0.2s;
+        }
+
+        .pi-viewport.cooldown {
+            border-color: var(--danger-red);
+            animation: shake-viewport 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        #pi-rows-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding-left: 0; 
+            width: 100%;
+        }
+
+        .pi-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px; 
+            position: relative;
+            min-height: 46px; 
+            width: 100%;
+            padding-left: 20px; 
+            box-sizing: border-box;
+        }
+
+        .pi-row.centered-row {
+            justify-content: center;
+            padding-left: 0;
+        }
+
+        .pi-group {
+            display: flex;
+            gap: 10px;
+            margin-right: 35px; 
+            padding: 4px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent; 
+            min-height: 46px;
+            box-sizing: content-box; 
+        }
+        
+        .pi-group.active-chunk {
+            border-color: var(--gold);
+            background: rgba(255, 215, 0, 0.05);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.1);
+        }
+
+        .pi-group.active-chunk:empty {
+            border-color: transparent;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .pi-group:last-child { margin-right: 0; }
+
+        .row-prefix {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 10px;
+            font-weight: 900;
+            color: var(--mid-grey);
+            font-size: 1.5rem;
+        }
+
+        .digit {
+            width: 36px;
+            height: 46px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--steel-blue);
+            color: white;
+            border-radius: 5px;
+            font-weight: 900;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+        }
+
+        .digit.decimal { background: var(--mid-grey); color: var(--deep-charcoal); }
+
+        .digit.wrong {
+            background: #d32f2f;
+            animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            max-width: 650px;
+            margin: 0 auto;
+        }
+
+        button {
+            padding: 16px;
+            border: 2px solid var(--mid-grey);
+            background: var(--gunmetal-grey);
+            color: var(--text-light);
+            border-radius: 8px;
+            font-size: 1.6rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        button:hover { 
+            background: var(--steel-blue);
+            border-color: white;
+            transform: scale(1.05);
+        }
+        
+        button.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            background: #444;
+        }
+
+        button:active { transform: translateY(2px); }
+
+        .modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: var(--gunmetal-grey);
+            padding: 50px;
+            border-radius: 18px;
+            text-align: center;
+            border: 4px solid var(--gold);
+            min-width: 400px;
+        }
+
+        .btn-restart {
+            background: var(--gold); color: var(--deep-charcoal); border: none;
+            padding: 15px 40px; border-radius: 8px; font-weight: 900; font-size: 1.4rem;
+            cursor: pointer; margin-top: 25px; width: 100%;
+        }
+        
+        .btn-review {
+            background: transparent; color: var(--text-light); border: 2px solid var(--mid-grey);
+            padding: 15px 40px; border-radius: 8px; font-weight: bold; font-size: 1.2rem;
+            cursor: pointer; margin-top: 15px; width: 100%;
+        }
+        .btn-review:hover { background: rgba(255,255,255,0.1); border-color: white; }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        @keyframes shake-viewport {
+            10%, 90% { transform: translate3d(-2px, 0, 0); border-color: var(--danger-red); }
+            20%, 80% { transform: translate3d(4px, 0, 0); border-color: var(--danger-red); }
+            30%, 50%, 70% { transform: translate3d(-8px, 0, 0); border-color: var(--danger-red); }
+            40%, 60% { transform: translate3d(8px, 0, 0); border-color: var(--danger-red); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="progress-wrapper">
+    <div class="progress-fill" id="progress-bar"></div>
+</div>
+
+<div class="container">
+    <div class="header-area">
+        <div class="badge score-badge">Score: <span id="score">0</span> / 1010</div>
+        <div class="badge best-badge">Best: <span id="best">0</span></div>
+    </div>
+    
+    <div class="strikes-container">
+        <div class="strike-symbol" id="strike-1">✖</div>
+        <div class="strike-symbol" id="strike-2">✖</div>
+        <div class="strike-symbol" id="strike-3">✖</div>
+    </div>
+    
+    <div class="pi-viewport" id="viewport">
+        <div id="pi-rows-container"></div>
+    </div>
+
+    <div class="numpad" id="numpad">
+        <button onclick="handleInput('1')">1</button>
+        <button onclick="handleInput('2')">2</button>
+        <button onclick="handleInput('3')">3</button>
+        <button onclick="handleInput('4')">4</button>
+        <button onclick="handleInput('5')">5</button>
+        <button onclick="handleInput('6')">6</button>
+        <button onclick="handleInput('7')">7</button>
+        <button onclick="handleInput('8')">8</button>
+        <button onclick="handleInput('9')">9</button>
+        <button onclick="handleInput('0')">0</button>
+    </div>
+</div>
+
+<div class="modal" id="game-over-modal">
+    <div class="modal-content">
+        <h2 id="modal-title" style="color: var(--gold); font-size: 2.5rem; margin-top: 0;">CHALLENGE OVER</h2>
+        <p style="font-size: 1.4rem;">Digits Memorized:</p>
+        <span id="final-score" style="font-size: 5rem; font-weight: 900; color: white; display: block;">0</span>
+        
+        <button class="btn-restart" onclick="resetGame()">RETRY CHALLENGE</button>
+        <button id="btn-view" class="btn-review" onclick="closeModal()">VIEW BOARD</button>
+    </div>
+</div>
+
+<script>
+    function generatePi(n) {
+        let digits = "";
+        let q = 1n, r = 0n, t = 1n, k = 1n, n_ = 3n, l = 3n;
+        while (digits.length < n) {
+            if (4n * q + r - t < n_ * t) {
+                digits += n_.toString();
+                let nr = 10n * (r - n_ * t);
+                n_ = ((10n * (3n * q + r)) / t) - 10n * n_;
+                q *= 10n; r = nr;
+            } else {
+                let nr = (2n * q + r) * l;
+                let nn = (q * (7n * k + 2n) + r * l) / (t * l);
+                q *= k; t *= l; l += 2n; k += 1n; n_ = nn; r = nr;
+            }
+        }
+        return digits.substring(1); 
+    }
+
+    const PI_DIGITS = generatePi(1200);
+    const TARGET = 1010;
+    
+    // DEBUG LOG
+    console.log(`Target: ${TARGET}`);
+    console.log(`End Sequence (1007-1010): ...${PI_DIGITS.substring(1007, 1010)}`);
+    console.log("Console Command available: debugWin()");
+
+    let currentIndex = 0;
+    let gameOver = false;
+    let currentRow = null;
+    let currentGroup = null;
+    
+    // --- STRIKE SYSTEM VARIABLES ---
+    let strikes = 0;
+    let isCooldown = false;
+
+    let personalBest = localStorage.getItem('pi-stream-pb') || 0;
+    document.getElementById('best').textContent = personalBest;
+
+    function playWrongSound() {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(110, audioCtx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+    }
+
+    function fireConfetti() {
+        var duration = 5 * 1000;
+        var animationEnd = Date.now() + duration;
+        var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 200 };
+
+        function randomInRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        var interval = setInterval(function() {
+            var timeLeft = animationEnd - Date.now();
+
+            if (timeLeft <= 0) {
+                return clearInterval(interval);
+            }
+
+            var particleCount = 50 * (timeLeft / duration);
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+            confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+        }, 250);
+    }
+
+    function createNewRow(isFirstRow = false) {
+        const rowsContainer = document.getElementById('pi-rows-container');
+        const row = document.createElement('div');
+        row.className = 'pi-row';
+        
+        if (isFirstRow) {
+            row.classList.add('centered-row'); // Center only the first row
+            const prefix = document.createElement('div');
+            prefix.className = 'row-prefix';
+            prefix.innerHTML = '<span class="digit decimal">3</span><span class="digit decimal">.</span>';
+            row.appendChild(prefix);
+        }
+        
+        rowsContainer.appendChild(row);
+        currentRow = row;
+    }
+
+    function createNewGroup() {
+        if (!currentRow) createNewRow(true); 
+        
+        if (currentGroup) currentGroup.classList.remove('active-chunk');
+        
+        const group = document.createElement('div');
+        group.className = 'pi-group active-chunk';
+        currentRow.appendChild(group);
+        currentGroup = group;
+    }
+
+    function setCooldown(state) {
+        isCooldown = state;
+        const btns = document.querySelectorAll('.numpad button');
+        const viewport = document.getElementById('viewport');
+        
+        if (state) {
+            btns.forEach(b => b.classList.add('locked'));
+            viewport.classList.add('cooldown');
+        } else {
+            btns.forEach(b => b.classList.remove('locked'));
+            viewport.classList.remove('cooldown');
+        }
+    }
+
+    function handleInput(num) {
+        if (gameOver || isCooldown) return;
+
+        // --- LAYOUT LOGIC ---
+        if (currentIndex === 10) {
+            createNewRow(false);
+            createNewGroup();
+        } else if (currentIndex > 10) {
+            const relIndex = currentIndex - 10;
+            if (relIndex > 0 && relIndex % 18 === 0) {
+                createNewRow(false);
+            }
+            if (relIndex > 0 && relIndex % 6 === 0) {
+                createNewGroup();
+            }
+        }
+
+        const viewport = document.getElementById('viewport');
+
+        if (num === PI_DIGITS[currentIndex]) {
+            // CORRECT INPUT
+            const span = document.createElement('span');
+            span.className = 'digit';
+            span.textContent = num;
+            currentGroup.appendChild(span);
+            
+            currentIndex++;
+            document.getElementById('score').textContent = currentIndex;
+            
+            const progressPercent = (currentIndex / TARGET) * 100;
+            document.getElementById('progress-bar').style.width = Math.min(progressPercent, 100) + '%';
+            
+            viewport.scrollTop = viewport.scrollHeight;
+            
+            if (currentIndex === TARGET) endGame(true);
+
+        } else {
+            // WRONG INPUT (STRIKE)
+            strikes++;
+            playWrongSound();
+            
+            // Light up the corresponding X
+            const strikeEl = document.getElementById(`strike-${strikes}`);
+            if(strikeEl) strikeEl.classList.add('active');
+
+            if (strikes >= 3) {
+                // Final Strike - Game Over
+                // Add the wrong digit visually just to show what killed the run
+                const span = document.createElement('span');
+                span.className = 'digit wrong';
+                span.textContent = num;
+                currentGroup.appendChild(span);
+                endGame(false, num);
+            } else {
+                // Strike 1 or 2 - Cooldown
+                setCooldown(true);
+                setTimeout(() => {
+                    setCooldown(false);
+                }, 1000);
+            }
+        }
+    }
+
+    function endGame(won, numInput) {
+        gameOver = true;
+        if (!won) {
+            document.getElementById('modal-title').textContent = "CHALLENGE OVER";
+            document.getElementById('modal-title').style.color = "#d32f2f";
+        } else {
+            document.getElementById('modal-title').textContent = "1010 DIGITS!";
+            document.getElementById('modal-title').style.color = "var(--gold)";
+            fireConfetti();
+        }
+
+        if (currentIndex > personalBest) {
+            personalBest = currentIndex;
+            localStorage.setItem('pi-stream-pb', personalBest);
+            document.getElementById('best').textContent = personalBest;
+        }
+
+        document.getElementById('final-score').textContent = currentIndex + (won ? " (MAX!)" : "");
+        document.getElementById('game-over-modal').style.display = 'flex';
+        document.getElementById('viewport').scrollTop = document.getElementById('viewport').scrollHeight;
+    }
+
+    function closeModal() {
+        document.getElementById('game-over-modal').style.display = 'none';
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key >= '0' && e.key <= '9') handleInput(e.key);
+    });
+
+    function resetGame() {
+        currentIndex = 0;
+        gameOver = false;
+        currentRow = null;
+        currentGroup = null;
+        
+        // Reset Strikes
+        strikes = 0;
+        isCooldown = false;
+        setCooldown(false);
+        document.querySelectorAll('.strike-symbol').forEach(el => el.classList.remove('active'));
+
+        document.getElementById('score').textContent = '0';
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('pi-rows-container').innerHTML = ''; 
+        document.getElementById('game-over-modal').style.display = 'none';
+        
+        // Initialize Layout Immediately
+        createNewRow(true); 
+        createNewGroup();
+    }
+    
+    // DEBUG COMMAND
+    window.debugWin = function() {
+        if(gameOver) resetGame();
+        let i = currentIndex;
+        function fastType() {
+            const batchSize = 50; 
+            for(let k=0; k<batchSize; k++) {
+                if (i >= 1010) return;
+                handleInput(PI_DIGITS[i]);
+                i++;
+            }
+            if (i < 1010 && !gameOver) requestAnimationFrame(fastType);
+        }
+        fastType();
+    };
+
+    resetGame();
+</script>
+</body>
+</html>
