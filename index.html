@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Memory Stream - Ultimate Edition</title>
+    <title>Pi Memory Challenge - 3 Strikes Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
@@ -15,7 +15,6 @@
             --text-light: #e0e0e0;
             --danger-red: #ff3333;
             --dim-red: #3a1a1a;
-            --neon-white: #ffffff;
         }
 
         body {
@@ -29,56 +28,20 @@
             min-height: 100vh;
             margin: 0;
             overflow: hidden;
-            transition: background-color 1s ease;
+            transition: background-color 1s ease; /* Smooth transition for intensity mode */
         }
 
-        /* --- FINAL STRETCH MODE (Active at 900) --- */
-        body.final-stretch-mode {
-            background-color: #050000; /* Pitch black */
+        /* --- INTENSITY MODE (900+) --- */
+        body.intensity-mode {
+            background-color: #000000;
         }
-        body.final-stretch-mode .container {
+
+        body.intensity-mode .container {
             border-color: var(--danger-red);
-            box-shadow: 0 0 40px rgba(255, 51, 51, 0.3);
-        }
-        body.final-stretch-mode .progress-fill {
-            background: var(--danger-red);
-            box-shadow: 0 0 20px var(--danger-red);
+            box-shadow: 0 0 40px rgba(255, 51, 51, 0.4);
         }
 
-        /* --- SPLITS SIDEBAR --- */
-        .splits-container {
-            position: fixed;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 120px;
-            text-align: right;
-            font-family: 'Courier New', monospace;
-            opacity: 0.6;
-            pointer-events: none;
-            z-index: 50;
-        }
-        .split-row {
-            font-size: 0.85rem;
-            margin-bottom: 4px;
-            color: var(--mid-grey);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 2px;
-        }
-        .split-row span {
-            color: var(--gold);
-            font-weight: bold;
-            margin-left: 8px;
-        }
-        .splits-header {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-            color: var(--steel-blue);
-        }
-
-        /* --- PROGRESS BAR & GHOST --- */
+        /* --- PROGRESS BAR UPDATES --- */
         .progress-wrapper {
             width: 95%;
             max-width: 1050px;
@@ -87,8 +50,18 @@
             border: 1px solid var(--mid-grey);
             border-radius: 6px;
             margin-bottom: 15px;
-            overflow: visible; /* Allow ghost to stick out */
+            position: relative; /* Essential for splits/marker positioning */
+            overflow: visible; /* Allow marker glow to bleed slightly if needed, though hidden usually handles it */
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        /* Inner container to clip the fill but keep markers visible if needed */
+        .progress-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+            overflow: hidden;
             position: relative;
         }
 
@@ -98,34 +71,34 @@
             background: var(--gold);
             box-shadow: 0 0 15px var(--gold);
             transition: width 0.1s linear;
-            border-radius: 6px;
             position: relative;
-            z-index: 1;
+            z-index: 2;
         }
 
-        .ghost-bar {
+        /* The glowing white bar */
+        .pb-marker {
             position: absolute;
             top: -4px;
             bottom: -4px;
-            width: 4px;
-            background: var(--neon-white);
-            box-shadow: 0 0 10px var(--neon-white), 0 0 20px var(--neon-white);
-            z-index: 2;
-            display: none; /* Hidden by default */
+            width: 2px;
+            background-color: white;
+            box-shadow: 0 0 6px white, 0 0 12px white;
+            z-index: 5;
+            display: none; /* Hidden until first fail */
             pointer-events: none;
         }
-        .ghost-bar::after {
-            content: "PB";
+
+        /* Small splits */
+        .split-marker {
             position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: var(--neon-white);
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: rgba(255, 255, 255, 0.3);
+            z-index: 3;
+            pointer-events: none;
         }
 
-        /* --- MAIN LAYOUT --- */
         .container {
             background: var(--gunmetal-grey);
             padding: 2.5rem;
@@ -135,9 +108,7 @@
             max-width: 1050px; 
             text-align: center;
             border: 1px solid var(--mid-grey);
-            transition: border-color 1s ease, box-shadow 1s ease;
-            position: relative;
-            z-index: 10;
+            transition: border-color 0.8s ease, box-shadow 0.8s ease;
         }
 
         .header-area {
@@ -146,6 +117,7 @@
             align-items: center;
             gap: 30px;
             margin-bottom: 1rem;
+            position: relative;
         }
 
         .badge {
@@ -258,6 +230,18 @@
             box-shadow: none;
         }
 
+        .pi-group:last-child { margin-right: 0; }
+
+        .row-prefix {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 10px;
+            font-weight: 900;
+            color: var(--mid-grey);
+            font-size: 1.5rem;
+        }
+
         .digit {
             width: 36px;
             height: 46px;
@@ -312,6 +296,7 @@
             transform: none !important;
             background: #444;
         }
+
         button:active { transform: translateY(2px); }
 
         .modal {
@@ -346,6 +331,7 @@
         }
         .btn-review:hover { background: rgba(255,255,255,0.1); border-color: white; }
 
+        /* Main Screen Retry Button (initially hidden) */
         #main-restart-btn {
             display: none;
             max-width: 400px;
@@ -358,6 +344,7 @@
             30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
+
         @keyframes shake-viewport {
             10%, 90% { transform: translate3d(-2px, 0, 0); border-color: var(--danger-red); }
             20%, 80% { transform: translate3d(4px, 0, 0); border-color: var(--danger-red); }
@@ -368,13 +355,11 @@
 </head>
 <body>
 
-<div class="splits-container" id="splits-list">
-    <div class="splits-header">SPLITS</div>
+<div class="progress-wrapper" id="progress-wrapper">
+    <div class="progress-inner">
+        <div class="progress-fill" id="progress-bar"></div>
     </div>
-
-<div class="progress-wrapper">
-    <div class="progress-fill" id="progress-bar"></div>
-    <div class="ghost-bar" id="ghost-bar"></div>
+    <div class="pb-marker" id="pb-marker"></div>
 </div>
 
 <div class="container">
@@ -442,21 +427,56 @@
     const PI_DIGITS = generatePi(1200);
     const TARGET = 1010;
     
-    // --- STATE VARIABLES ---
+    // DEBUG LOG
+    console.log(`Target: ${TARGET}`);
+    console.log(`End Sequence (1007-1010): ...${PI_DIGITS.substring(1007, 1010)}`);
+    console.log("Console Command available: debugWin()");
+
     let currentIndex = 0;
     let gameOver = false;
     let currentRow = null;
     let currentGroup = null;
+    let sessionHasFailed = false; // Flag to control PB marker visibility
+    
+    // --- STRIKE SYSTEM VARIABLES ---
     let strikes = 0;
     let isCooldown = false;
-    let startTime = null;
-    let personalBest = parseInt(localStorage.getItem('pi-stream-pb') || '0');
 
-    // UI Updates on Load
+    let personalBest = localStorage.getItem('pi-stream-pb') || 0;
     document.getElementById('best').textContent = personalBest;
-    updateGhostBar();
 
-    // --- AUDIO ---
+    // --- INITIALIZATION ---
+    function initProgressBar() {
+        const wrapper = document.getElementById('progress-wrapper');
+        // Add splits every 100
+        for (let i = 100; i < TARGET; i += 100) {
+            const split = document.createElement('div');
+            split.className = 'split-marker';
+            // Calculate percentage
+            const pct = (i / TARGET) * 100;
+            split.style.left = `${pct}%`;
+            wrapper.appendChild(split);
+        }
+        updatePBMarker();
+    }
+    
+    function updatePBMarker() {
+        if (!personalBest || personalBest == 0) return;
+        
+        const marker = document.getElementById('pb-marker');
+        const pct = (personalBest / TARGET) * 100;
+        marker.style.left = `${Math.min(pct, 100)}%`;
+        
+        // Only show if session has failed at least once
+        if (sessionHasFailed) {
+            marker.style.display = 'block';
+        } else {
+            marker.style.display = 'none';
+        }
+    }
+
+    initProgressBar();
+
     function playWrongSound() {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -472,24 +492,28 @@
         osc.stop(audioCtx.currentTime + 0.4);
     }
 
-    // --- FX ---
     function fireConfetti() {
         var duration = 5 * 1000;
         var animationEnd = Date.now() + duration;
         var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 200 };
 
-        function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+        function randomInRange(min, max) {
+            return Math.random() * (max - min) + min;
+        }
 
         var interval = setInterval(function() {
             var timeLeft = animationEnd - Date.now();
-            if (timeLeft <= 0) return clearInterval(interval);
+
+            if (timeLeft <= 0) {
+                return clearInterval(interval);
+            }
+
             var particleCount = 50 * (timeLeft / duration);
             confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
             confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
         }, 250);
     }
 
-    // --- LAYOUT LOGIC ---
     function createNewRow(isFirstRow = false) {
         const rowsContainer = document.getElementById('pi-rows-container');
         const row = document.createElement('div');
@@ -509,18 +533,20 @@
 
     function createNewGroup() {
         if (!currentRow) createNewRow(true); 
+        
         if (currentGroup) currentGroup.classList.remove('active-chunk');
+        
         const group = document.createElement('div');
         group.className = 'pi-group active-chunk';
         currentRow.appendChild(group);
         currentGroup = group;
     }
 
-    // --- GAMEPLAY HELPERS ---
     function setCooldown(state) {
         isCooldown = state;
         const btns = document.querySelectorAll('.numpad button');
         const viewport = document.getElementById('viewport');
+        
         if (state) {
             btns.forEach(b => b.classList.add('locked'));
             viewport.classList.add('cooldown');
@@ -530,45 +556,21 @@
         }
     }
 
-    function updateGhostBar() {
-        const ghost = document.getElementById('ghost-bar');
-        if (personalBest > 0) {
-            ghost.style.display = 'block';
-            const pct = (personalBest / TARGET) * 100;
-            ghost.style.left = Math.min(pct, 100) + '%';
-        } else {
-            ghost.style.display = 'none';
-        }
-    }
-
-    function addSplit(digits) {
-        if (!startTime) return;
-        const now = Date.now();
-        const diff = now - startTime;
-        const minutes = Math.floor(diff / 60000);
-        const seconds = Math.floor((diff % 60000) / 1000);
-        const ms = Math.floor((diff % 1000) / 10);
-        
-        const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-        
-        const row = document.createElement('div');
-        row.className = 'split-row';
-        row.innerHTML = `${digits}: <span>${timeStr}</span>`;
-        document.getElementById('splits-list').appendChild(row);
-    }
-
-    // --- MAIN INPUT HANDLER ---
     function handleInput(num) {
         if (gameOver || isCooldown) return;
-        if (currentIndex === 0) startTime = Date.now();
 
-        // 1. Layout Management
+        // --- LAYOUT LOGIC ---
         if (currentIndex === 10) {
-            createNewRow(false); createNewGroup();
+            createNewRow(false);
+            createNewGroup();
         } else if (currentIndex > 10) {
             const relIndex = currentIndex - 10;
-            if (relIndex > 0 && relIndex % 18 === 0) createNewRow(false);
-            if (relIndex > 0 && relIndex % 6 === 0) createNewGroup();
+            if (relIndex > 0 && relIndex % 18 === 0) {
+                createNewRow(false);
+            }
+            if (relIndex > 0 && relIndex % 6 === 0) {
+                createNewGroup();
+            }
         }
 
         const viewport = document.getElementById('viewport');
@@ -583,27 +585,20 @@
             currentIndex++;
             document.getElementById('score').textContent = currentIndex;
             
-            // Progress Bar
             const progressPercent = (currentIndex / TARGET) * 100;
             document.getElementById('progress-bar').style.width = Math.min(progressPercent, 100) + '%';
-            
-            // Auto Scroll
-            viewport.scrollTop = viewport.scrollHeight;
-            
-            // Splits Logic (Every 100)
-            if (currentIndex > 0 && currentIndex % 100 === 0) {
-                addSplit(currentIndex);
-            }
 
-            // Final Stretch Logic (900+)
+            // --- INTENSITY MODE CHECK (900 DIGITS) ---
             if (currentIndex === 900) {
-                document.body.classList.add('final-stretch-mode');
+                document.body.classList.add('intensity-mode');
             }
+            
+            viewport.scrollTop = viewport.scrollHeight;
             
             if (currentIndex === TARGET) endGame(true);
 
         } else {
-            // WRONG (STRIKE)
+            // WRONG
             strikes++;
             playWrongSound();
             
@@ -618,13 +613,18 @@
                 endGame(false, num);
             } else {
                 setCooldown(true);
-                setTimeout(() => setCooldown(false), 1000);
+                setTimeout(() => {
+                    setCooldown(false);
+                }, 1000);
             }
         }
     }
 
     function endGame(won, numInput) {
         gameOver = true;
+        // MARK SESSION AS FAILED (or completed) SO PB SHOWS NEXT TIME
+        sessionHasFailed = true;
+
         if (!won) {
             document.getElementById('modal-title').textContent = "CHALLENGE OVER";
             document.getElementById('modal-title').style.color = "#d32f2f";
@@ -638,9 +638,10 @@
             personalBest = currentIndex;
             localStorage.setItem('pi-stream-pb', personalBest);
             document.getElementById('best').textContent = personalBest;
-            // Update ghost bar for next round immediately
-            updateGhostBar();
         }
+
+        // Update visual marker position (will be shown on next reset)
+        updatePBMarker();
 
         document.getElementById('final-score').textContent = currentIndex + (won ? " (MAX!)" : "");
         document.getElementById('game-over-modal').style.display = 'flex';
@@ -648,7 +649,10 @@
     }
 
     function closeModal() {
+        // VIEW BOARD MODE
         document.getElementById('game-over-modal').style.display = 'none';
+        
+        // Hide Numpad, Show Retry Button
         document.getElementById('numpad').style.display = 'none';
         document.getElementById('main-restart-btn').style.display = 'block';
     }
@@ -662,42 +666,40 @@
         gameOver = false;
         currentRow = null;
         currentGroup = null;
+        
+        // Reset Strikes
         strikes = 0;
         isCooldown = false;
-        startTime = null;
-        
         setCooldown(false);
         document.querySelectorAll('.strike-symbol').forEach(el => el.classList.remove('active'));
-        document.body.classList.remove('final-stretch-mode'); // Reset final stretch
-        
-        // Clear Splits
-        const splitsDiv = document.getElementById('splits-list');
-        while(splitsDiv.children.length > 1) { // Keep Header
-            splitsDiv.removeChild(splitsDiv.lastChild);
-        }
+
+        // Reset Intensity
+        document.body.classList.remove('intensity-mode');
+
+        // Show PB Marker if allowed
+        updatePBMarker();
 
         document.getElementById('score').textContent = '0';
         document.getElementById('progress-bar').style.width = '0%';
         document.getElementById('pi-rows-container').innerHTML = ''; 
         document.getElementById('game-over-modal').style.display = 'none';
         
-        // Restore Numpad
+        // Restore Numpad, Hide Retry Button
         document.getElementById('numpad').style.display = 'grid';
         document.getElementById('main-restart-btn').style.display = 'none';
         
+        // Initialize Layout Immediately
         createNewRow(true); 
         createNewGroup();
-        updateGhostBar();
     }
-    
-    resetGame();
     
     // DEBUG COMMAND
     window.debugWin = function() {
         if(gameOver) resetGame();
         let i = currentIndex;
         function fastType() {
-            for(let k=0; k<20; k++) {
+            const batchSize = 50; 
+            for(let k=0; k<batchSize; k++) {
                 if (i >= 1010) return;
                 handleInput(PI_DIGITS[i]);
                 i++;
@@ -706,6 +708,8 @@
         }
         fastType();
     };
+
+    resetGame();
 </script>
 </body>
 </html>
