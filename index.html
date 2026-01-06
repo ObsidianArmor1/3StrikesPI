@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Memory Challenge - 3 Strikes Edition</title>
+    <title>Pi Memory Challenge - Ultimate Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
@@ -15,6 +15,7 @@
             --text-light: #e0e0e0;
             --danger-red: #ff3333;
             --dim-red: #3a1a1a;
+            --marker-glow: rgba(255, 255, 255, 0.8);
         }
 
         body {
@@ -28,20 +29,56 @@
             min-height: 100vh;
             margin: 0;
             overflow: hidden;
-            transition: background-color 1s ease; /* Smooth transition for intensity mode */
+            transition: background-color 1.5s ease;
         }
 
-        /* --- INTENSITY MODE (900+) --- */
-        body.intensity-mode {
-            background-color: #000000;
+        /* --- TENSION MODE (900+) --- */
+        body.tension-active {
+            background-color: #050505;
         }
-
-        body.intensity-mode .container {
+        
+        .container.tension-active {
             border-color: var(--danger-red);
-            box-shadow: 0 0 40px rgba(255, 51, 51, 0.4);
+            box-shadow: 0 0 40px rgba(255, 51, 51, 0.3);
+            animation: pulse-red 2s infinite;
         }
 
-        /* --- PROGRESS BAR UPDATES --- */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 20px rgba(255, 51, 51, 0.2); }
+            50% { box-shadow: 0 0 50px rgba(255, 51, 51, 0.6); }
+            100% { box-shadow: 0 0 20px rgba(255, 51, 51, 0.2); }
+        }
+
+        /* --- SPLIT TIMERS --- */
+        .splits-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            height: 30px;
+            width: 95%;
+            max-width: 1050px;
+            overflow-x: auto;
+            scrollbar-width: none; /* Firefox */
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .splits-container::-webkit-scrollbar { display: none; }
+
+        .split-pill {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            color: #aaa;
+            white-space: nowrap;
+            animation: fade-in 0.5s ease;
+        }
+        .split-pill span { color: var(--gold); font-weight: bold; margin-right: 4px; }
+
+        @keyframes fade-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- PROGRESS BAR & MARKER --- */
         .progress-wrapper {
             width: 95%;
             max-width: 1050px;
@@ -49,20 +86,11 @@
             background: var(--deep-charcoal);
             border: 1px solid var(--mid-grey);
             border-radius: 6px;
-            margin-bottom: 15px;
-            position: relative; /* Essential for splits/marker positioning */
-            overflow: visible; /* Allow marker glow to bleed slightly if needed, though hidden usually handles it */
+            margin-bottom: 5px;
+            overflow: visible; /* Changed to visible for marker */
+            position: relative;
             box-shadow: 0 0 10px rgba(0,0,0,0.5);
             z-index: 10;
-        }
-
-        /* Inner container to clip the fill but keep markers visible if needed */
-        .progress-inner {
-            width: 100%;
-            height: 100%;
-            border-radius: 5px;
-            overflow: hidden;
-            position: relative;
         }
 
         .progress-fill {
@@ -71,34 +99,33 @@
             background: var(--gold);
             box-shadow: 0 0 15px var(--gold);
             transition: width 0.1s linear;
-            position: relative;
-            z-index: 2;
+            border-radius: 6px;
         }
 
-        /* The glowing white bar */
         .pb-marker {
             position: absolute;
             top: -4px;
             bottom: -4px;
-            width: 2px;
-            background-color: white;
-            box-shadow: 0 0 6px white, 0 0 12px white;
-            z-index: 5;
-            display: none; /* Hidden until first fail */
+            width: 3px;
+            background: #fff;
+            box-shadow: 0 0 8px #fff, 0 0 15px #fff;
+            z-index: 20;
+            display: none; /* Hidden initially */
             pointer-events: none;
         }
-
-        /* Small splits */
-        .split-marker {
+        .pb-marker::after {
+            content: "PB";
             position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 1px;
-            background-color: rgba(255, 255, 255, 0.3);
-            z-index: 3;
-            pointer-events: none;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.6rem;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 0 5px black;
         }
 
+        /* --- MAIN UI --- */
         .container {
             background: var(--gunmetal-grey);
             padding: 2.5rem;
@@ -108,7 +135,7 @@
             max-width: 1050px; 
             text-align: center;
             border: 1px solid var(--mid-grey);
-            transition: border-color 0.8s ease, box-shadow 0.8s ease;
+            transition: border-color 1s ease, box-shadow 1s ease;
         }
 
         .header-area {
@@ -355,14 +382,15 @@
 </head>
 <body>
 
-<div class="progress-wrapper" id="progress-wrapper">
-    <div class="progress-inner">
-        <div class="progress-fill" id="progress-bar"></div>
+<div class="splits-container" id="splits-container">
     </div>
+
+<div class="progress-wrapper">
+    <div class="progress-fill" id="progress-bar"></div>
     <div class="pb-marker" id="pb-marker"></div>
 </div>
 
-<div class="container">
+<div class="container" id="game-container">
     <div class="header-area">
         <div class="badge score-badge">Score: <span id="score">0</span> / 1010</div>
         <div class="badge best-badge">Best: <span id="best">0</span></div>
@@ -436,46 +464,18 @@
     let gameOver = false;
     let currentRow = null;
     let currentGroup = null;
-    let sessionHasFailed = false; // Flag to control PB marker visibility
     
-    // --- STRIKE SYSTEM VARIABLES ---
+    // Timer Variables
+    let startTime = null;
+    let splits = [];
+    
+    // Strike System
     let strikes = 0;
     let isCooldown = false;
+    let hasFailedOnce = false; // Tracks if we should show the PB marker
 
     let personalBest = localStorage.getItem('pi-stream-pb') || 0;
     document.getElementById('best').textContent = personalBest;
-
-    // --- INITIALIZATION ---
-    function initProgressBar() {
-        const wrapper = document.getElementById('progress-wrapper');
-        // Add splits every 100
-        for (let i = 100; i < TARGET; i += 100) {
-            const split = document.createElement('div');
-            split.className = 'split-marker';
-            // Calculate percentage
-            const pct = (i / TARGET) * 100;
-            split.style.left = `${pct}%`;
-            wrapper.appendChild(split);
-        }
-        updatePBMarker();
-    }
-    
-    function updatePBMarker() {
-        if (!personalBest || personalBest == 0) return;
-        
-        const marker = document.getElementById('pb-marker');
-        const pct = (personalBest / TARGET) * 100;
-        marker.style.left = `${Math.min(pct, 100)}%`;
-        
-        // Only show if session has failed at least once
-        if (sessionHasFailed) {
-            marker.style.display = 'block';
-        } else {
-            marker.style.display = 'none';
-        }
-    }
-
-    initProgressBar();
 
     function playWrongSound() {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -556,8 +556,41 @@
         }
     }
 
+    // --- TIMING FUNCTIONS ---
+    function formatTime(ms) {
+        let minutes = Math.floor(ms / 60000);
+        let seconds = Math.floor((ms % 60000) / 1000);
+        let tenths = Math.floor((ms % 1000) / 100);
+        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}.${tenths}`;
+    }
+
+    function addSplit(index) {
+        if (!startTime) return;
+        const elapsed = Date.now() - startTime;
+        const pill = document.createElement('div');
+        pill.className = 'split-pill';
+        pill.innerHTML = `<span>${index}</span> ${formatTime(elapsed)}`;
+        document.getElementById('splits-container').appendChild(pill);
+    }
+
+    // --- PB MARKER LOGIC ---
+    function updatePBMarker() {
+        if (!hasFailedOnce || personalBest <= 0) return;
+        
+        const marker = document.getElementById('pb-marker');
+        const percent = Math.min((personalBest / TARGET) * 100, 100);
+        
+        marker.style.left = percent + '%';
+        marker.style.display = 'block';
+    }
+
     function handleInput(num) {
         if (gameOver || isCooldown) return;
+
+        // Start Timer on first input
+        if (currentIndex === 0 && !startTime) {
+            startTime = Date.now();
+        }
 
         // --- LAYOUT LOGIC ---
         if (currentIndex === 10) {
@@ -587,13 +620,20 @@
             
             const progressPercent = (currentIndex / TARGET) * 100;
             document.getElementById('progress-bar').style.width = Math.min(progressPercent, 100) + '%';
-
-            // --- INTENSITY MODE CHECK (900 DIGITS) ---
-            if (currentIndex === 900) {
-                document.body.classList.add('intensity-mode');
-            }
             
+            // Auto Scroll
             viewport.scrollTop = viewport.scrollHeight;
+            
+            // --- SPLIT TIMER (Every 100) ---
+            if (currentIndex % 100 === 0) {
+                addSplit(currentIndex);
+            }
+
+            // --- TENSION MODE (900) ---
+            if (currentIndex === 900) {
+                document.body.classList.add('tension-active');
+                document.getElementById('game-container').classList.add('tension-active');
+            }
             
             if (currentIndex === TARGET) endGame(true);
 
@@ -622,16 +662,21 @@
 
     function endGame(won, numInput) {
         gameOver = true;
-        // MARK SESSION AS FAILED (or completed) SO PB SHOWS NEXT TIME
-        sessionHasFailed = true;
+        
+        // Disable tension visual
+        document.body.classList.remove('tension-active');
+        document.getElementById('game-container').classList.remove('tension-active');
 
         if (!won) {
             document.getElementById('modal-title').textContent = "CHALLENGE OVER";
             document.getElementById('modal-title').style.color = "#d32f2f";
+            hasFailedOnce = true; // Trigger marker visibility next round
         } else {
             document.getElementById('modal-title').textContent = "1010 DIGITS!";
             document.getElementById('modal-title').style.color = "var(--gold)";
             fireConfetti();
+            // If they win, they technically failed to fail, but let's show marker if they restart
+            hasFailedOnce = true; 
         }
 
         if (currentIndex > personalBest) {
@@ -639,8 +684,8 @@
             localStorage.setItem('pi-stream-pb', personalBest);
             document.getElementById('best').textContent = personalBest;
         }
-
-        // Update visual marker position (will be shown on next reset)
+        
+        // Update Marker Position now that run is over
         updatePBMarker();
 
         document.getElementById('final-score').textContent = currentIndex + (won ? " (MAX!)" : "");
@@ -666,6 +711,12 @@
         gameOver = false;
         currentRow = null;
         currentGroup = null;
+        startTime = null;
+        splits = [];
+        
+        // Reset CSS
+        document.body.classList.remove('tension-active');
+        document.getElementById('game-container').classList.remove('tension-active');
         
         // Reset Strikes
         strikes = 0;
@@ -673,21 +724,19 @@
         setCooldown(false);
         document.querySelectorAll('.strike-symbol').forEach(el => el.classList.remove('active'));
 
-        // Reset Intensity
-        document.body.classList.remove('intensity-mode');
-
-        // Show PB Marker if allowed
-        updatePBMarker();
-
         document.getElementById('score').textContent = '0';
         document.getElementById('progress-bar').style.width = '0%';
         document.getElementById('pi-rows-container').innerHTML = ''; 
+        document.getElementById('splits-container').innerHTML = ''; // Clear splits
         document.getElementById('game-over-modal').style.display = 'none';
         
         // Restore Numpad, Hide Retry Button
         document.getElementById('numpad').style.display = 'grid';
         document.getElementById('main-restart-btn').style.display = 'none';
         
+        // Show Marker if we have failed at least once in session
+        updatePBMarker();
+
         // Initialize Layout Immediately
         createNewRow(true); 
         createNewGroup();
