@@ -84,7 +84,6 @@
         .score-badge { color: var(--gold); }
         .best-badge { color: var(--text-light); border-color: var(--mid-grey); }
 
-        /* --- NEW STRIKES STYLING --- */
         .strikes-container {
             display: flex;
             gap: 15px;
@@ -100,7 +99,7 @@
         .strike-symbol {
             font-size: 2rem;
             font-weight: 900;
-            color: var(--dim-red); /* Dim/Inactive state */
+            color: var(--dim-red);
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             text-shadow: none;
             user-select: none;
@@ -111,7 +110,6 @@
             text-shadow: 0 0 20px rgba(255, 51, 51, 0.8);
             transform: scale(1.3);
         }
-        /* -------------------------- */
 
         .pi-viewport {
             background: rgba(0, 0, 0, 0.4);
@@ -283,6 +281,13 @@
         }
         .btn-review:hover { background: rgba(255,255,255,0.1); border-color: white; }
 
+        /* Main Screen Retry Button (initially hidden) */
+        #main-restart-btn {
+            display: none;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
         @keyframes shake {
             10%, 90% { transform: translate3d(-1px, 0, 0); }
             20%, 80% { transform: translate3d(2px, 0, 0); }
@@ -332,6 +337,8 @@
         <button onclick="handleInput('9')">9</button>
         <button onclick="handleInput('0')">0</button>
     </div>
+
+    <button id="main-restart-btn" class="btn-restart" onclick="resetGame()">RETRY CHALLENGE</button>
 </div>
 
 <div class="modal" id="game-over-modal">
@@ -427,7 +434,7 @@
         row.className = 'pi-row';
         
         if (isFirstRow) {
-            row.classList.add('centered-row'); // Center only the first row
+            row.classList.add('centered-row');
             const prefix = document.createElement('div');
             prefix.className = 'row-prefix';
             prefix.innerHTML = '<span class="digit decimal">3</span><span class="digit decimal">.</span>';
@@ -483,7 +490,7 @@
         const viewport = document.getElementById('viewport');
 
         if (num === PI_DIGITS[currentIndex]) {
-            // CORRECT INPUT
+            // CORRECT
             const span = document.createElement('span');
             span.className = 'digit';
             span.textContent = num;
@@ -500,24 +507,20 @@
             if (currentIndex === TARGET) endGame(true);
 
         } else {
-            // WRONG INPUT (STRIKE)
+            // WRONG
             strikes++;
             playWrongSound();
             
-            // Light up the corresponding X
             const strikeEl = document.getElementById(`strike-${strikes}`);
             if(strikeEl) strikeEl.classList.add('active');
 
             if (strikes >= 3) {
-                // Final Strike - Game Over
-                // Add the wrong digit visually just to show what killed the run
                 const span = document.createElement('span');
                 span.className = 'digit wrong';
                 span.textContent = num;
                 currentGroup.appendChild(span);
                 endGame(false, num);
             } else {
-                // Strike 1 or 2 - Cooldown
                 setCooldown(true);
                 setTimeout(() => {
                     setCooldown(false);
@@ -549,7 +552,12 @@
     }
 
     function closeModal() {
+        // VIEW BOARD MODE
         document.getElementById('game-over-modal').style.display = 'none';
+        
+        // Hide Numpad, Show Retry Button
+        document.getElementById('numpad').style.display = 'none';
+        document.getElementById('main-restart-btn').style.display = 'block';
     }
 
     document.addEventListener('keydown', (e) => {
@@ -572,6 +580,10 @@
         document.getElementById('progress-bar').style.width = '0%';
         document.getElementById('pi-rows-container').innerHTML = ''; 
         document.getElementById('game-over-modal').style.display = 'none';
+        
+        // Restore Numpad, Hide Retry Button
+        document.getElementById('numpad').style.display = 'grid';
+        document.getElementById('main-restart-btn').style.display = 'none';
         
         // Initialize Layout Immediately
         createNewRow(true); 
