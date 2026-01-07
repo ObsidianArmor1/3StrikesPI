@@ -31,7 +31,6 @@
             transition: background-color 1s ease;
         }
 
-        /* High Stakes Mode (Active at 900+) */
         body.high-stakes {
             background-color: #000000;
         }
@@ -41,7 +40,6 @@
             box-shadow: 0 0 40px rgba(255, 51, 51, 0.4);
         }
 
-        /* Split Timers (Left Margin) */
         #splits-container {
             position: absolute;
             left: 20px;
@@ -100,8 +98,8 @@
             background-color: white;
             box-shadow: 0 0 8px white, 0 0 15px white;
             z-index: 10;
-            display: none; /* Hidden until fail */
             transition: left 0.3s ease;
+            /* display: none; Removed so it shows immediately */
         }
 
         .container {
@@ -264,7 +262,6 @@
 
         .digit.decimal { background: var(--mid-grey); color: var(--deep-charcoal); }
 
-        /* Style for a digit that is WRONG (Game Over) */
         .digit.wrong {
             background: #d32f2f;
             animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
@@ -272,10 +269,10 @@
             z-index: 10;
         }
 
-        /* Style for a digit that was missed but corrected (Strike 1 or 2) */
+        /* RECOVERED MISTAKE (Red Background on Correct Input) */
         .digit.recovered {
-            background: #d32f2f; /* Red background to show previous error */
-            box-shadow: 0 0 5px rgba(255, 51, 51, 0.5);
+            background: #d32f2f !important; 
+            box-shadow: 0 0 8px rgba(255, 51, 51, 0.8);
         }
 
         .numpad {
@@ -555,6 +552,7 @@
             const pct = Math.min((personalBest / TARGET) * 100, 100);
             const marker = document.getElementById('best-marker');
             marker.style.left = pct + '%';
+            marker.style.display = 'block'; // Ensure it's always visible if score > 0
         }
     }
 
@@ -567,24 +565,26 @@
             timerRunning = true;
         }
 
-        // --- LAYOUT LOGIC ---
-        if (currentIndex === 10) {
-            createNewRow(false);
-            createNewGroup();
-        } else if (currentIndex > 10) {
-            const relIndex = currentIndex - 10;
-            if (relIndex > 0 && relIndex % 18 === 0) {
-                createNewRow(false);
-            }
-            if (relIndex > 0 && relIndex % 6 === 0) {
-                createNewGroup();
-            }
-        }
-
         const viewport = document.getElementById('viewport');
 
         if (num === PI_DIGITS[currentIndex]) {
             // --- CORRECT INPUT ---
+            
+            // 1. Handle Layout Logic (Create new groups ONLY on correct input)
+            if (currentIndex === 10) {
+                createNewRow(false);
+                createNewGroup();
+            } else if (currentIndex > 10) {
+                const relIndex = currentIndex - 10;
+                if (relIndex > 0 && relIndex % 18 === 0) {
+                    createNewRow(false);
+                }
+                if (relIndex > 0 && relIndex % 6 === 0) {
+                    createNewGroup();
+                }
+            }
+
+            // 2. Add the Digit
             const span = document.createElement('span');
             
             // Check if this index was previously mistaken
@@ -653,8 +653,6 @@
             document.getElementById('modal-title').textContent = "CHALLENGE OVER";
             document.getElementById('modal-title').style.color = "#d32f2f";
 
-            const marker = document.getElementById('best-marker');
-            marker.style.display = 'block';
             updateBestMarker();
 
         } else {
@@ -718,6 +716,9 @@
 
         document.getElementById('numpad').style.display = 'grid';
         document.getElementById('main-restart-btn').style.display = 'none';
+        
+        // Show Best Marker immediately if exists
+        updateBestMarker();
         
         createNewRow(true); 
         createNewGroup();
