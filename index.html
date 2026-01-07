@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pi Memory Challenge - 3 Strikes Edition</title>
+    <title>Pi Memory Challenge - Practice Mode</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
@@ -99,7 +99,6 @@
             box-shadow: 0 0 8px white, 0 0 15px white;
             z-index: 10;
             transition: left 0.3s ease;
-            /* display: none; Removed so it shows immediately */
         }
 
         .container {
@@ -137,31 +136,16 @@
         .score-badge { color: var(--gold); }
         .best-badge { color: var(--text-light); border-color: var(--mid-grey); }
 
+        /* Hidden Strikes Container since errors don't count */
         .strikes-container {
-            display: flex;
+            display: none; 
             gap: 15px;
             justify-content: center;
             margin-bottom: 15px;
             padding: 10px;
             background: rgba(0,0,0,0.2);
             border-radius: 50px;
-            display: inline-flex;
             border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .strike-symbol {
-            font-size: 2rem;
-            font-weight: 900;
-            color: var(--dim-red);
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-shadow: none;
-            user-select: none;
-        }
-
-        .strike-symbol.active {
-            color: var(--danger-red);
-            text-shadow: 0 0 20px rgba(255, 51, 51, 0.8);
-            transform: scale(1.3);
         }
 
         .pi-viewport {
@@ -269,7 +253,6 @@
             z-index: 10;
         }
 
-        /* RECOVERED MISTAKE (Red Background on Correct Input) */
         .digit.recovered {
             background: #d32f2f !important; 
             box-shadow: 0 0 8px rgba(255, 51, 51, 0.8);
@@ -456,7 +439,7 @@
 
     let strikes = 0;
     let isCooldown = false;
-    let mistakesSet = new Set(); // Tracks indices where user made a mistake
+    let mistakesSet = new Set(); 
 
     let personalBest = localStorage.getItem('pi-stream-pb') || 0;
     document.getElementById('best').textContent = personalBest;
@@ -552,7 +535,7 @@
             const pct = Math.min((personalBest / TARGET) * 100, 100);
             const marker = document.getElementById('best-marker');
             marker.style.left = pct + '%';
-            marker.style.display = 'block'; // Ensure it's always visible if score > 0
+            marker.style.display = 'block'; 
         }
     }
 
@@ -570,7 +553,7 @@
         if (num === PI_DIGITS[currentIndex]) {
             // --- CORRECT INPUT ---
             
-            // 1. Handle Layout Logic (Create new groups ONLY on correct input)
+            // Layout Logic (Create new groups ONLY on correct input)
             if (currentIndex === 10) {
                 createNewRow(false);
                 createNewGroup();
@@ -584,14 +567,12 @@
                 }
             }
 
-            // 2. Add the Digit
             const span = document.createElement('span');
             
-            // Check if this index was previously mistaken
             if (mistakesSet.has(currentIndex)) {
-                span.className = 'digit recovered'; // Red background
+                span.className = 'digit recovered'; 
             } else {
-                span.className = 'digit'; // Normal Blue
+                span.className = 'digit'; 
             }
             
             span.textContent = num;
@@ -620,24 +601,13 @@
             if (currentIndex === TARGET) endGame(true);
 
         } else {
-            // --- WRONG INPUT ---
-            strikes++;
+            // --- WRONG INPUT (No Strikes) ---
             playWrongSound();
-            
-            const strikeEl = document.getElementById(`strike-${strikes}`);
-            if(strikeEl) strikeEl.classList.add('active');
-
-            if (strikes >= 3) {
-                // GAME OVER (3rd Strike)
-                endGame(false, num);
-            } else {
-                // STRIKE 1 OR 2
-                mistakesSet.add(currentIndex); // Remember this spot!
-                setCooldown(true);
-                setTimeout(() => {
-                    setCooldown(false);
-                }, 1000);
-            }
+            mistakesSet.add(currentIndex); // Mark for shame
+            setCooldown(true);
+            setTimeout(() => {
+                setCooldown(false);
+            }, 1000);
         }
     }
 
@@ -647,14 +617,12 @@
 
         if (!won) {
             const span = document.createElement('span');
-            span.className = 'digit wrong'; // Red + Shake
+            span.className = 'digit wrong'; 
             span.textContent = numInput;
             currentGroup.appendChild(span);
             document.getElementById('modal-title').textContent = "CHALLENGE OVER";
             document.getElementById('modal-title').style.color = "#d32f2f";
-
             updateBestMarker();
-
         } else {
             document.getElementById('modal-title').textContent = "1010 DIGITS!";
             document.getElementById('modal-title').style.color = "var(--gold)";
@@ -682,7 +650,6 @@
     document.addEventListener('keydown', (e) => {
         if (e.key >= '0' && e.key <= '9') {
             handleInput(e.key);
-            
             const btn = document.getElementById('btn-' + e.key);
             if(btn) {
                 btn.classList.add('btn-active');
@@ -701,10 +668,9 @@
         
         strikes = 0;
         isCooldown = false;
-        mistakesSet.clear(); // Clear mistakes memory
+        mistakesSet.clear(); 
         
         setCooldown(false);
-        document.querySelectorAll('.strike-symbol').forEach(el => el.classList.remove('active'));
 
         document.body.classList.remove('high-stakes');
         document.getElementById('splits-container').innerHTML = '';
@@ -717,7 +683,6 @@
         document.getElementById('numpad').style.display = 'grid';
         document.getElementById('main-restart-btn').style.display = 'none';
         
-        // Show Best Marker immediately if exists
         updateBestMarker();
         
         createNewRow(true); 
