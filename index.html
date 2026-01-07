@@ -41,41 +41,6 @@
             box-shadow: 0 0 40px rgba(255, 51, 51, 0.4);
         }
 
-        /* Progress Bar & Best Marker */
-        .progress-wrapper {
-            width: 95%;
-            max-width: 1050px;
-            height: 12px;
-            background: var(--deep-charcoal);
-            border: 1px solid var(--mid-grey);
-            border-radius: 6px;
-            margin-bottom: 15px;
-            overflow: visible; /* changed to visible to allow glow overflow if needed */
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            position: relative;
-        }
-
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: var(--gold);
-            box-shadow: 0 0 15px var(--gold);
-            transition: width 0.1s linear;
-            border-radius: 6px;
-        }
-
-        #best-marker {
-            position: absolute;
-            top: -4px; /* Extend slightly above/below */
-            bottom: -4px;
-            width: 3px;
-            background-color: white;
-            box-shadow: 0 0 8px white, 0 0 15px white;
-            z-index: 10;
-            display: none; /* Hidden until first fail */
-            transition: left 0.3s ease;
-        }
-
         /* Split Timers (Left Margin) */
         #splits-container {
             position: absolute;
@@ -90,7 +55,7 @@
             text-align: left;
             opacity: 0.6;
             width: 120px;
-            pointer-events: none; /* Let clicks pass through if needed */
+            pointer-events: none;
         }
 
         .split-entry {
@@ -104,6 +69,41 @@
             font-weight: bold;
         }
 
+        .progress-wrapper {
+            width: 95%;
+            max-width: 1050px;
+            height: 12px;
+            background: var(--deep-charcoal);
+            border: 1px solid var(--mid-grey);
+            border-radius: 6px;
+            margin-bottom: 15px;
+            overflow: visible;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--gold);
+            box-shadow: 0 0 15px var(--gold);
+            transition: width 0.1s linear;
+            border-radius: 6px;
+        }
+
+        /* Best Score Marker */
+        #best-marker {
+            position: absolute;
+            top: -4px;
+            bottom: -4px;
+            width: 3px;
+            background-color: white;
+            box-shadow: 0 0 8px white, 0 0 15px white;
+            z-index: 10;
+            display: none; /* Hidden until fail */
+            transition: left 0.3s ease;
+        }
+
         .container {
             background: var(--gunmetal-grey);
             padding: 2.5rem;
@@ -113,8 +113,6 @@
             max-width: 1050px; 
             text-align: center;
             border: 1px solid var(--mid-grey);
-            position: relative;
-            z-index: 2;
             transition: border 0.5s ease, box-shadow 0.5s ease;
         }
 
@@ -141,6 +139,7 @@
         .score-badge { color: var(--gold); }
         .best-badge { color: var(--text-light); border-color: var(--mid-grey); }
 
+        /* Strikes Display */
         .strikes-container {
             display: flex;
             gap: 15px;
@@ -184,6 +183,7 @@
             transition: border-color 0.2s;
         }
 
+        /* Shake viewport on non-fatal error */
         .pi-viewport.cooldown {
             border-color: var(--danger-red);
             animation: shake-viewport 0.4s cubic-bezier(.36,.07,.19,.97) both;
@@ -269,6 +269,8 @@
         .digit.wrong {
             background: #d32f2f;
             animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+            box-shadow: 0 0 15px #ff3333;
+            z-index: 10;
         }
 
         .numpad {
@@ -296,7 +298,7 @@
             border-color: white;
             transform: scale(1.05);
         }
-        
+
         button.locked {
             opacity: 0.5;
             cursor: not-allowed;
@@ -305,6 +307,12 @@
         }
 
         button:active { transform: translateY(2px); }
+
+        button.btn-active {
+            background: var(--steel-blue);
+            border-color: white;
+            transform: translateY(2px) scale(1.05);
+        }
 
         .modal {
             position: fixed;
@@ -338,7 +346,6 @@
         }
         .btn-review:hover { background: rgba(255,255,255,0.1); border-color: white; }
 
-        /* Main Screen Retry Button (initially hidden) */
         #main-restart-btn {
             display: none;
             max-width: 400px;
@@ -362,8 +369,7 @@
 </head>
 <body>
 
-<div id="splits-container">
-    </div>
+<div id="splits-container"></div>
 
 <div class="progress-wrapper">
     <div class="progress-fill" id="progress-bar"></div>
@@ -387,16 +393,16 @@
     </div>
 
     <div class="numpad" id="numpad">
-        <button onclick="handleInput('1')">1</button>
-        <button onclick="handleInput('2')">2</button>
-        <button onclick="handleInput('3')">3</button>
-        <button onclick="handleInput('4')">4</button>
-        <button onclick="handleInput('5')">5</button>
-        <button onclick="handleInput('6')">6</button>
-        <button onclick="handleInput('7')">7</button>
-        <button onclick="handleInput('8')">8</button>
-        <button onclick="handleInput('9')">9</button>
-        <button onclick="handleInput('0')">0</button>
+        <button id="btn-1" onclick="handleInput('1')">1</button>
+        <button id="btn-2" onclick="handleInput('2')">2</button>
+        <button id="btn-3" onclick="handleInput('3')">3</button>
+        <button id="btn-4" onclick="handleInput('4')">4</button>
+        <button id="btn-5" onclick="handleInput('5')">5</button>
+        <button id="btn-6" onclick="handleInput('6')">6</button>
+        <button id="btn-7" onclick="handleInput('7')">7</button>
+        <button id="btn-8" onclick="handleInput('8')">8</button>
+        <button id="btn-9" onclick="handleInput('9')">9</button>
+        <button id="btn-0" onclick="handleInput('0')">0</button>
     </div>
 
     <button id="main-restart-btn" class="btn-restart" onclick="resetGame()">RETRY CHALLENGE</button>
@@ -435,7 +441,6 @@
     const PI_DIGITS = generatePi(1200);
     const TARGET = 1010;
     
-    // DEBUG LOG
     console.log(`Target: ${TARGET}`);
     console.log("Console Command available: debugWin()");
 
@@ -443,12 +448,12 @@
     let gameOver = false;
     let currentRow = null;
     let currentGroup = null;
-    
+
     // --- TIMING VARIABLES ---
     let startTime = null;
     let timerRunning = false;
 
-    // --- STRIKE SYSTEM VARIABLES ---
+    // --- STRIKE SYSTEM ---
     let strikes = 0;
     let isCooldown = false;
 
@@ -498,7 +503,7 @@
         row.className = 'pi-row';
         
         if (isFirstRow) {
-            row.classList.add('centered-row');
+            row.classList.add('centered-row'); 
             const prefix = document.createElement('div');
             prefix.className = 'row-prefix';
             prefix.innerHTML = '<span class="digit decimal">3</span><span class="digit decimal">.</span>';
@@ -542,7 +547,6 @@
     }
 
     function updateBestMarker() {
-        // Only updates position if PB > 0
         if (personalBest > 0) {
             const pct = Math.min((personalBest / TARGET) * 100, 100);
             const marker = document.getElementById('best-marker');
@@ -594,7 +598,7 @@
             }
 
             // --- SPLIT TIMERS (Every 100) ---
-            if (currentIndex % 100 === 0) {
+            if (currentIndex > 0 && currentIndex % 100 === 0) {
                 const elapsed = Date.now() - startTime;
                 const splitDiv = document.createElement('div');
                 splitDiv.className = 'split-entry';
@@ -615,12 +619,10 @@
             if(strikeEl) strikeEl.classList.add('active');
 
             if (strikes >= 3) {
-                const span = document.createElement('span');
-                span.className = 'digit wrong';
-                span.textContent = num;
-                currentGroup.appendChild(span);
+                // GAME OVER
                 endGame(false, num);
             } else {
+                // PENALTY COOLDOWN
                 setCooldown(true);
                 setTimeout(() => {
                     setCooldown(false);
@@ -634,10 +636,13 @@
         timerRunning = false;
 
         if (!won) {
+            const span = document.createElement('span');
+            span.className = 'digit wrong'; // Red Background
+            span.textContent = numInput;
+            currentGroup.appendChild(span);
             document.getElementById('modal-title').textContent = "CHALLENGE OVER";
             document.getElementById('modal-title').style.color = "#d32f2f";
-            
-            // SHOW BEST MARKER (Hidden until first fail logic)
+
             const marker = document.getElementById('best-marker');
             marker.style.display = 'block';
             updateBestMarker();
@@ -652,7 +657,6 @@
             personalBest = currentIndex;
             localStorage.setItem('pi-stream-pb', personalBest);
             document.getElementById('best').textContent = personalBest;
-            // Update marker immediately if we just set a new PB
             updateBestMarker();
         }
 
@@ -662,16 +666,21 @@
     }
 
     function closeModal() {
-        // VIEW BOARD MODE
         document.getElementById('game-over-modal').style.display = 'none';
-        
-        // Hide Numpad, Show Retry Button
         document.getElementById('numpad').style.display = 'none';
         document.getElementById('main-restart-btn').style.display = 'block';
     }
 
     document.addEventListener('keydown', (e) => {
-        if (e.key >= '0' && e.key <= '9') handleInput(e.key);
+        if (e.key >= '0' && e.key <= '9') {
+            handleInput(e.key);
+            
+            const btn = document.getElementById('btn-' + e.key);
+            if(btn) {
+                btn.classList.add('btn-active');
+                setTimeout(() => btn.classList.remove('btn-active'), 100);
+            }
+        }
     });
 
     function resetGame() {
@@ -682,28 +691,22 @@
         currentRow = null;
         currentGroup = null;
         
-        // Reset Strikes
         strikes = 0;
         isCooldown = false;
         setCooldown(false);
         document.querySelectorAll('.strike-symbol').forEach(el => el.classList.remove('active'));
 
-        // Reset High Stakes
         document.body.classList.remove('high-stakes');
-
-        // Reset Splits
         document.getElementById('splits-container').innerHTML = '';
 
         document.getElementById('score').textContent = '0';
         document.getElementById('progress-bar').style.width = '0%';
         document.getElementById('pi-rows-container').innerHTML = ''; 
         document.getElementById('game-over-modal').style.display = 'none';
-        
-        // Restore Numpad, Hide Retry Button
+
         document.getElementById('numpad').style.display = 'grid';
         document.getElementById('main-restart-btn').style.display = 'none';
         
-        // Initialize Layout Immediately
         createNewRow(true); 
         createNewGroup();
     }
@@ -712,8 +715,7 @@
     window.debugWin = function() {
         if(gameOver) resetGame();
         let i = currentIndex;
-        
-        // Force start time if not started, so splits have timestamps
+
         if(!timerRunning) {
             startTime = Date.now();
             timerRunning = true;
@@ -721,8 +723,7 @@
 
         function fastType() {
             const batchSize = 50; 
-            // STOP AT 1007, NOT 1010
-            const stopAt = 1007;
+            const stopAt = 1007; 
 
             for(let k=0; k<batchSize; k++) {
                 if (i >= stopAt) return;
