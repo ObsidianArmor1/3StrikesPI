@@ -139,7 +139,6 @@
         .score-badge { color: var(--gold); }
         .best-badge { color: var(--text-light); border-color: var(--mid-grey); }
 
-        /* Strikes Display */
         .strikes-container {
             display: flex;
             gap: 15px;
@@ -183,7 +182,6 @@
             transition: border-color 0.2s;
         }
 
-        /* Shake viewport on non-fatal error */
         .pi-viewport.cooldown {
             border-color: var(--danger-red);
             animation: shake-viewport 0.4s cubic-bezier(.36,.07,.19,.97) both;
@@ -266,11 +264,18 @@
 
         .digit.decimal { background: var(--mid-grey); color: var(--deep-charcoal); }
 
+        /* Style for a digit that is WRONG (Game Over) */
         .digit.wrong {
             background: #d32f2f;
             animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
             box-shadow: 0 0 15px #ff3333;
             z-index: 10;
+        }
+
+        /* Style for a digit that was missed but corrected (Strike 1 or 2) */
+        .digit.recovered {
+            background: #d32f2f; /* Red background to show previous error */
+            box-shadow: 0 0 5px rgba(255, 51, 51, 0.5);
         }
 
         .numpad {
@@ -449,13 +454,12 @@
     let currentRow = null;
     let currentGroup = null;
 
-    // --- TIMING VARIABLES ---
     let startTime = null;
     let timerRunning = false;
 
-    // --- STRIKE SYSTEM ---
     let strikes = 0;
     let isCooldown = false;
+    let mistakesSet = new Set(); // Tracks indices where user made a mistake
 
     let personalBest = localStorage.getItem('pi-stream-pb') || 0;
     document.getElementById('best').textContent = personalBest;
@@ -580,9 +584,16 @@
         const viewport = document.getElementById('viewport');
 
         if (num === PI_DIGITS[currentIndex]) {
-            // CORRECT
+            // --- CORRECT INPUT ---
             const span = document.createElement('span');
-            span.className = 'digit';
+            
+            // Check if this index was previously mistaken
+            if (mistakesSet.has(currentIndex)) {
+                span.className = 'digit recovered'; // Red background
+            } else {
+                span.className = 'digit'; // Normal Blue
+            }
+            
             span.textContent = num;
             currentGroup.appendChild(span);
             
@@ -592,12 +603,10 @@
             const progressPercent = (currentIndex / TARGET) * 100;
             document.getElementById('progress-bar').style.width = Math.min(progressPercent, 100) + '%';
 
-            // --- HIGH STAKES MODE (900+) ---
             if (currentIndex === 900) {
                 document.body.classList.add('high-stakes');
             }
 
-            // --- SPLIT TIMERS (Every 100) ---
             if (currentIndex > 0 && currentIndex % 100 === 0) {
                 const elapsed = Date.now() - startTime;
                 const splitDiv = document.createElement('div');
@@ -611,7 +620,7 @@
             if (currentIndex === TARGET) endGame(true);
 
         } else {
-            // WRONG
+            // --- WRONG INPUT ---
             strikes++;
             playWrongSound();
             
@@ -619,10 +628,11 @@
             if(strikeEl) strikeEl.classList.add('active');
 
             if (strikes >= 3) {
-                // GAME OVER
+                // GAME OVER (3rd Strike)
                 endGame(false, num);
             } else {
-                // PENALTY COOLDOWN
+                // STRIKE 1 OR 2
+                mistakesSet.add(currentIndex); // Remember this spot!
                 setCooldown(true);
                 setTimeout(() => {
                     setCooldown(false);
@@ -637,7 +647,7 @@
 
         if (!won) {
             const span = document.createElement('span');
-            span.className = 'digit wrong'; // Red Background
+            span.className = 'digit wrong'; // Red + Shake
             span.textContent = numInput;
             currentGroup.appendChild(span);
             document.getElementById('modal-title').textContent = "CHALLENGE OVER";
@@ -693,6 +703,8 @@
         
         strikes = 0;
         isCooldown = false;
+        mistakesSet.clear(); // Clear mistakes memory
+        
         setCooldown(false);
         document.querySelectorAll('.strike-symbol').forEach(el => el.classList.remove('active'));
 
